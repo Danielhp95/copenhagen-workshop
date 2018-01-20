@@ -49,6 +49,9 @@ class AquaHombre(base_agent.BaseAgent):
         abstract_action = Policy.sample_actions(obs) # TODO: implement Perhaps sample from action distribution
 
         action_realizer = ActionRealizer(obs)
+        if not action_realizer.find_marine_positions()[0].any():
+            return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
+
 
         action, params = action_realizer.realize_action(abstract_action)
         # Something?
@@ -69,6 +72,7 @@ class ActionRealizer():
     _MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
     _ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
     _STOP = actions.FUNCTIONS.Stop_quick.id
+    _NO_OP = actions.FUNCTIONS.no_op.id
 
     _PLAYER_FRIENDLY = 1
     _PLAYER_NEUTRAL = 3  # beacon/minerals
