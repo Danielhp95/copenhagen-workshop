@@ -13,7 +13,7 @@ class Copenhagenworkshop(lib.Map):
         directory names the directory under StarcraftII/Maps/ which hosts the maps named below
     """
 
-    directory = "FirstExperiment"
+    directory = "copenhagen_workshop"
     download  = None
     players   = 1
     game_steps_per_episode = 16 * 60 * 5 # 5 minutes per episode
