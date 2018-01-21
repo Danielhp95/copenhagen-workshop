@@ -11,6 +11,21 @@ from pysc2.lib import features
 
 import enum
 
+_SCREEN = "screen"
+_PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
+
+_SELECT_ARMY = actions.FUNCTIONS.select_army.id
+_MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
+_ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
+_STOP = actions.FUNCTIONS.Stop_quick.id
+_NO_OP = actions.FUNCTIONS.no_op.id
+
+_PLAYER_FRIENDLY = 1
+_PLAYER_NEUTRAL = 3  # beacon/minerals
+_PLAYER_HOSTILE = 4
+
+_SELECT_ALL = [0]
+_NOT_QUEUED = [0]
 
 class AbstractAction(enum.IntEnum):
     MOVE_UP           = 0
@@ -48,14 +63,26 @@ class AquaHombre(base_agent.BaseAgent):
 
         abstract_action = Policy.sample_actions(obs) # TODO: implement Perhaps sample from action distribution
 
-        action_realizer = ActionRealizer(obs)
-        if not action_realizer.find_marine_positions()[0].any():
+        if not self.is_action_possible(abstract_action, obs):
+            print("NO OP")
             return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
 
-
+        action_realizer = ActionRealizer(obs)
         action, params = action_realizer.realize_action(abstract_action)
-        # Something?
+        print(action)
         return actions.FunctionCall(action, params)
+
+    def is_action_possible(self, abstract_action, obs):
+        available_actions = obs.observation["available_actions"]
+        if abstract_action < AbstractAction.ATTACK_UP and _MOVE_SCREEN in available_actions:
+            return True
+        elif abstract_action < AbstractAction.STOP and _STOP in available_actions:
+            return True
+        elif abstract_action == AbstractAction.STOP and _STOP in available_actions:
+            return True
+        else:
+            return False
+
 
 class Policy():
 
@@ -65,42 +92,25 @@ class Policy():
 
 class ActionRealizer():
 
-    _SCREEN = "screen"
-    _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
-
-    _SELECT_ARMY = actions.FUNCTIONS.select_army.id
-    _MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
-    _ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
-    _STOP = actions.FUNCTIONS.Stop_quick.id
-    _NO_OP = actions.FUNCTIONS.no_op.id
-
-    _PLAYER_FRIENDLY = 1
-    _PLAYER_NEUTRAL = 3  # beacon/minerals
-    _PLAYER_HOSTILE = 4
-
-    _SELECT_ALL = [0]
-    _NOT_QUEUED = [0]
-
     def __init__(self, obs):
         self.obs = obs
-
 
     def realize_action(self, action_id):
         if not action_id and action_id not in [action.value for action in AbstractAction]:
             raise ValueError("action id was None or it wasn't a valid action")
 
         if action_id == AbstractAction.STOP: # if it's movement action
-            return (self._STOP, [self._NOT_QUEUED]) # TODO: check
+            return (_STOP, [_NOT_QUEUED]) # TODO: check
         else:
             return self.handle_movement(action_id)
 
     def handle_movement(self, action_id):
         number_of_directions = 8
         direction   = action_id if action_id < AbstractAction.ATTACK_UP else action_id - number_of_directions
-        action_type = self._MOVE_SCREEN if action_id < AbstractAction.ATTACK_UP else self._ATTACK_SCREEN
+        action_type = _MOVE_SCREEN if action_id < AbstractAction.ATTACK_UP else _ATTACK_SCREEN
 
         target_position = self.get_target_position(direction)
-        return (action_type, [self._NOT_QUEUED, target_position]) # (action, [position])
+        return (action_type, [_NOT_QUEUED, target_position]) # (action, [position])
 
     def get_target_position(self, direction):
         marine_positions = self.find_marine_positions()
@@ -115,9 +125,10 @@ class ActionRealizer():
             target_xs[0] = max(0, target_xs[0] - 5)
         if direction in [Direction.RIGHT, Direction.DOWN_RIGHT, Direction.UP_RIGHT]:
             target_xs[0] = min(83, target_xs[0] + 5)
-        return target_ys[0], target_xs[0]
+        print("{} {}".format(marine_positions[0][0], target_ys[0]))
+        return target_xs[0], target_ys[0] # Remember that even though observation gives y,x coordinates. We give back x,y!
 
     def find_marine_positions(self):
         """ Returns tuple: (np.array[y_positions], np.array[x_positions]) """ 
-        player_relative = self.obs.observation[self._SCREEN][self._PLAYER_RELATIVE]
-        return (player_relative == self._PLAYER_FRIENDLY).nonzero()
+        player_relative = self.obs.observation[_SCREEN][_PLAYER_RELATIVE]
+        return (player_relative == _PLAYER_FRIENDLY).nonzero()
