@@ -64,12 +64,10 @@ class AquaHombre(base_agent.BaseAgent):
         abstract_action = Policy.sample_actions(obs) # TODO: implement Perhaps sample from action distribution
 
         if not self.is_action_possible(abstract_action, obs):
-            print("NO OP")
             return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
 
         action_realizer = ActionRealizer(obs)
         action, params = action_realizer.realize_action(abstract_action)
-        print(action)
         return actions.FunctionCall(action, params)
 
     def is_action_possible(self, abstract_action, obs):
@@ -88,7 +86,7 @@ class Policy():
 
     @staticmethod
     def sample_actions(obs):
-        return random.choice([AbstractAction.MOVE_LEFT, AbstractAction.STOP])
+        return random.choice([AbstractAction.MOVE_UP_RIGHT])
 
 class ActionRealizer():
 
@@ -116,17 +114,17 @@ class ActionRealizer():
         marine_positions = self.find_marine_positions()
 
         target_ys, target_xs = np.copy(marine_positions)
+        target_ys, target_xs  = int(target_ys.mean()), int(target_xs.mean()) # To compensate for marine occupying  multiple tiles
 
         if direction in [Direction.UP, Direction.UP_LEFT, Direction.UP_RIGHT]:
-            target_ys[0] = max(0, target_ys[0] - 5)
+            target_ys = max(0, target_ys - 5)
         if direction in [Direction.DOWN, Direction.DOWN_LEFT, Direction.DOWN_RIGHT]:
-            target_ys[0] = min(83, target_ys[0] + 5) #TODO: find maximum value via scree features
+            target_ys = min(83, target_ys + 5) #TODO: find maximum value via scree features
         if direction in [Direction.LEFT, Direction.DOWN_LEFT, Direction.UP_LEFT]:
-            target_xs[0] = max(0, target_xs[0] - 5)
+            target_xs = max(0, target_xs - 5)
         if direction in [Direction.RIGHT, Direction.DOWN_RIGHT, Direction.UP_RIGHT]:
-            target_xs[0] = min(83, target_xs[0] + 5)
-        print("{} {}".format(marine_positions[0][0], target_ys[0]))
-        return target_xs[0], target_ys[0] # Remember that even though observation gives y,x coordinates. We give back x,y!
+            target_xs = min(83, target_xs + 5)
+        return target_xs, target_ys # Remember that even though observation gives y,x coordinates. We give back x,y!
 
     def find_marine_positions(self):
         """ Returns tuple: (np.array[y_positions], np.array[x_positions]) """ 
