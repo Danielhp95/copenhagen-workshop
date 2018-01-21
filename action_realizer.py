@@ -11,6 +11,7 @@ from pysc2.lib import features
 
 import enum
 
+
 _SCREEN = "screen"
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 
@@ -56,51 +57,28 @@ class Direction(enum.IntEnum):
     LEFT       = 6
     UP_LEFT    = 7
 
-class AquaHombre(base_agent.BaseAgent):
-
-    def step(self, obs):
-        super(AquaHombre, self).step(obs)
-
-        abstract_action = Policy.sample_actions(obs) # TODO: implement Perhaps sample from action distribution
-
-        if not self.is_action_possible(abstract_action, obs):
-            return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
-
-        action_realizer = ActionRealizer(obs)
-        action, params = action_realizer.realize_action(abstract_action)
-        return actions.FunctionCall(action, params)
-
-    def is_action_possible(self, abstract_action, obs):
-        available_actions = obs.observation["available_actions"]
-        if abstract_action < AbstractAction.ATTACK_UP and _MOVE_SCREEN in available_actions:
-            return True
-        elif abstract_action < AbstractAction.STOP and _STOP in available_actions:
-            return True
-        elif abstract_action == AbstractAction.STOP and _STOP in available_actions:
-            return True
-        else:
-            return False
-
-
-class Policy():
-
-    @staticmethod
-    def sample_actions(obs):
-        return random.choice([AbstractAction.MOVE_LEFT])
-
 class ActionRealizer():
 
     def __init__(self, obs):
-        self.obs = obs
-
+        first_environment = obs[0]
+        flattened_observation = np.array(list(map(lambda x: x.flatten(), first_environment)))
+        self.observation = flattened_observation
+        
     def realize_action(self, action_id):
+        print(action_id)
         if not action_id and action_id not in [action.value for action in AbstractAction]:
             raise ValueError("action id was None or it wasn't a valid action")
+
+        if self.marine_is_dead():
+            return actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])
 
         if action_id == AbstractAction.STOP: # if it's movement action
             return (_STOP, [_NOT_QUEUED]) # TODO: check
         else:
             return self.handle_movement(action_id)
+
+    def marine_is_dead(self):
+        return (self.observation == _PLAYER_FRIENDLY).nonzero()[0].any()
 
     def handle_movement(self, action_id):
         number_of_directions = 8
@@ -128,5 +106,4 @@ class ActionRealizer():
 
     def find_marine_positions(self):
         """ Returns tuple: (np.array[y_positions], np.array[x_positions]) """ 
-        player_relative = self.obs.observation[_SCREEN][_PLAYER_RELATIVE]
-        return (player_relative == _PLAYER_FRIENDLY).nonzero()
+        return (self.observation == _PLAYER_FRIENDLY).nonzero()

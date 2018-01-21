@@ -1,6 +1,3 @@
-
-
-
 from gym.spaces.box import Box
 from gym.spaces.discrete import Discrete
 from pysc2.env.environment import TimeStep
@@ -9,6 +6,8 @@ from pysc2.lib.features import SCREEN_FEATURES
 import sys
 import numpy as np
 
+
+from action_realizer import ActionRealizer
 
 def timestep_to_gym_step(timestep: TimeStep):
     obs = timestep.observation["screen"][SCREEN_FEATURES.player_relative.index]
@@ -94,7 +93,20 @@ class SC2AtariEnv:
         if self.reselect_army_freq > 0 and self.step_counter % self.reselect_army_freq == 0:
             self._reselect_army()
 
-        timestep = self._step_with_attack_move(action_obs[0])
+        abstract_action, observation = action_obs 
+        try:
+            action, params = ActionRealizer(observation).realize_action(abstract_action)
+
+            pysc2_action = [actions.FunctionCall(action, params)]
+            timestep = self.sc2_env.step(pysc2_action)[0]
+        except  ValueError:
+            # HACKY
+            print("EXCEPTION CAUGHT, INVALID ACTION: {}".format(abstract_action))
+            pysc2_action = [actions.FunctionCall(actions.FUNCTIONS.no_op.id, [])]
+            timestep = self.sc2_env.step(pysc2_action)[0]
+
+        # timestep = self._step_with_attack_move(action_obs[0])
+        # Because  we are not checking in aquahombre anymore, we may do invalid actions
 
         if timestep.last():
             self._summarise_episode(timestep)

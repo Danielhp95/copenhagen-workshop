@@ -55,7 +55,7 @@ def main():
     flags.DEFINE_integer("frames", 40, "Number of frames in millions")
     flags.DEFINE_integer("step_mul", 8, "sc2 step multiplier")
     flags.DEFINE_integer("n_envs", 1, "Number of sc2 environments to run in parallel")
-    flags.DEFINE_integer("resolution", 32, "sc2 resolution")
+    flags.DEFINE_integer("resolution", 84, "sc2 resolution")
     flags.DEFINE_string("lrschedule", "constant",
         "linear or constant, learning rate schedule for baselines a2c")
     flags.DEFINE_float("learning_rate", 3e-4, "learning rate")
